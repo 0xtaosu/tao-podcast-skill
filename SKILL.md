@@ -70,7 +70,7 @@ All transcript outputs are working drafts; always recommend one strong-LLM proof
 - The renderer fills YAML, About fields, 收听索引, Transcript, and 提取状态, and strips the template's `%%` block.
 - `Summary` and `Bullet point` are intentionally left blank: write them after generation from the transcript, then proofread names and terms.
 - It refuses to overwrite an existing note with the same `url` or the same filename unless `--force`; prefer editing the existing note instead.
-- The meta file is copied next to the note as `<episode-id>.meta.json`.
+- Keep `meta.json` in the working directory for debugging; do not commit it to the vault.
 
 ## Deterministic Rules
 
@@ -121,7 +121,7 @@ python3 scripts/obsidian_note.py \
   --out-dir "Readwise/Podcast"
 ```
 
-Outputs `NOTE <note-path>` and `META <meta-path>`. The note is a scaffold, not a finished summary: fill `Summary` / `Bullet point` and proofread the transcript before calling it done.
+Outputs `NOTE <note-path>`. The note is a scaffold, not a finished summary: fill `Summary` / `Bullet point` and proofread the transcript before calling it done.
 
 ## Host-Specific Notes
 

@@ -213,7 +213,7 @@ def _existing_note(out_dir: Path, url: str) -> Optional[Path]:
 
 def render_note_from_files(
     txt_path: Path, meta_path: Path, template_path: Path, out_dir: Path, force: bool = False
-) -> Tuple[Path, Path]:
+) -> Path:
     meta = json.loads(Path(meta_path).read_text(encoding="utf-8"))
     template = Path(template_path).read_text(encoding="utf-8")
     rows = parse_transcript(Path(txt_path).read_text(encoding="utf-8"))
@@ -271,8 +271,6 @@ def render_note_from_files(
         f"- `{format_timestamp(sec)}` {chapter_title}" for sec, chapter_title in chapters
     )
 
-    episode_id = Path(urlparse(url).path).stem or "episode"
-    meta_name = f"{sanitize_filename(episode_id)}.meta.json"
     asr = meta.get("asr") or {}
     model = str(asr.get("model") or "")
     line_count = int(meta.get("quality", {}).get("line_count") or len(rows))
@@ -284,7 +282,6 @@ def render_note_from_files(
         [
             f"- {date.today().isoformat()}：{method}，共 {line_count} 个片段、约 {max(1, round(duration_sec / 60)) if duration_sec else 'N'} 分钟音频。",
             f"- 解析方式：`{resolver or 'unknown'}`。",
-            f"- 提取记录：[[{meta_name}]]。",
         ]
     )
 
@@ -326,10 +323,7 @@ def render_note_from_files(
     if note_path.exists() and not force:
         raise RuntimeError(f"note path already exists: {note_path} (use --force to overwrite)")
     note_path.write_text(text, encoding="utf-8")
-
-    meta_out = out_dir / meta_name
-    meta_out.write_text(json.dumps(meta, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    return note_path, meta_out
+    return note_path
 
 
 def main() -> int:
@@ -342,14 +336,13 @@ def main() -> int:
     args = parser.parse_args()
 
     try:
-        note, meta_out = render_note_from_files(
+        note = render_note_from_files(
             Path(args.txt), Path(args.meta), Path(args.template), Path(args.out_dir), args.force
         )
     except Exception as exc:
         print(f"FAIL\t{exc}", file=sys.stderr)
         return 1
     print(f"NOTE\t{note}")
-    print(f"META\t{meta_out}")
     return 0
 
 

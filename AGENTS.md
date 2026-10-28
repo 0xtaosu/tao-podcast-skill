@@ -69,7 +69,7 @@ python3 scripts/obsidian_note.py \
   --out-dir "Readwise/Podcast"
 ```
 
-Success is `NOTE <note-path>` plus `META <meta-path>`. The renderer fills metadata, chapters, transcript and extraction status; it leaves `Summary` / `Bullet point` for the agent to write and proofread.
+Success is `NOTE <note-path>`. The renderer fills metadata, chapters, transcript and extraction status; it leaves `Summary` / `Bullet point` for the agent to write and proofread. Keep `meta.json` in the working directory, not in the vault.
 
 ## Failure Contract
 
