@@ -68,10 +68,10 @@ python3 scripts/podcast_transcript_txt.py \
 
 ```bash
 mkdir -p ~/.codex/skills
-cp -R podcast-transcript-txt-skill ~/.codex/skills/podcast-transcript-txt
+cp -R podcast-transcript-txt-skill ~/.codex/skills/tao-podcast-transcript
 ```
 
-在对话中触发 `$podcast-transcript-txt`。
+在对话中触发 `$tao-podcast-transcript`。
 
 ## 方式 C：给任何 Agent 直接接入（推荐通用法）
 

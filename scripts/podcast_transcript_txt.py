@@ -148,7 +148,13 @@ def run_doctor() -> int:
     if exit_code == 0:
         print("READY\tpython3 scripts/podcast_transcript_txt.py --input '<link-or-title>' --out-dir '<output-dir>'")
     else:
-        print("FIX\tpython3 -m pip install -r requirements.txt")
+        failed = {item["name"] for item in checks if item["status"] == "FAIL"}
+        if failed & {"yt-dlp", "faster-whisper"}:
+            print("FIX\tpython3 -m pip install -r requirements.txt")
+        if "model-root" in failed:
+            print("FIX\tset PODCAST_ASR_MODEL_ROOT to a writable directory, e.g. /tmp/podcast-models")
+        if "python" in failed:
+            print("FIX\tuse Python 3.9+")
     return exit_code
 
 

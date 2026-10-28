@@ -129,7 +129,7 @@ python3 scripts/podcast_transcript_txt.py --doctor
 Copy the repo into your agent's skill directory (exact path depends on your agent runner):
 
 ```bash
-cp -R podcast-transcript-txt-skill <your-agent-skills-dir>/podcast-transcript-txt
+cp -R podcast-transcript-txt-skill <your-agent-skills-dir>/tao-podcast-transcript
 ```
 
 ## Usage
