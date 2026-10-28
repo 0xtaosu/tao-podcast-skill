@@ -44,8 +44,8 @@ This project is designed for practical reliability:
 ## TL;DR
 
 ```bash
-git clone https://github.com/0xtaosu/tao-podcast-transcript.git
-cd tao-podcast-transcript
+git clone https://github.com/0xtaosu/tao-podcast-skill.git
+cd tao-podcast-skill
 python3 -m pip install -r requirements.txt
 python3 scripts/podcast_transcript_txt.py --doctor
 python3 scripts/podcast_transcript_txt.py \
@@ -63,8 +63,8 @@ Output:
 If you want another agent to use this repo directly from a GitHub link, this is the shortest reliable flow:
 
 ```bash
-git clone https://github.com/0xtaosu/tao-podcast-transcript.git
-cd tao-podcast-transcript
+git clone https://github.com/0xtaosu/tao-podcast-skill.git
+cd tao-podcast-skill
 python3 -m pip install -r requirements.txt
 python3 scripts/podcast_transcript_txt.py --doctor
 python3 scripts/podcast_transcript_txt.py \
@@ -118,8 +118,8 @@ python3 scripts/podcast_transcript_txt.py --doctor
 ### Option A: Use as a normal CLI (recommended)
 
 ```bash
-git clone https://github.com/0xtaosu/tao-podcast-transcript.git
-cd tao-podcast-transcript
+git clone https://github.com/0xtaosu/tao-podcast-skill.git
+cd tao-podcast-skill
 python3 -m pip install -r requirements.txt
 python3 scripts/podcast_transcript_txt.py --doctor
 ```
@@ -129,7 +129,7 @@ python3 scripts/podcast_transcript_txt.py --doctor
 Copy the repo into your agent's skill directory (exact path depends on your agent runner):
 
 ```bash
-cp -R tao-podcast-transcript <your-agent-skills-dir>/tao-podcast-transcript
+cp -R tao-podcast-skill <your-agent-skills-dir>/tao-podcast-skill
 ```
 
 ## Usage

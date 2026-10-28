@@ -1,9 +1,9 @@
 ---
-name: tao-podcast-transcript
+name: tao-podcast-skill
 description: Deterministic workflow to find and export full podcast transcripts as cleaned TXT files from YouTube URLs, episode webpages (including Xiaoyuzhou), Apple Podcasts title search, X/Twitter links, direct audio URLs, or plain episode titles, and optionally render an Obsidian note from Template/Podcast.md. Use when users ask for 逐字稿/文字版/transcript/txt or ask to add a podcast episode to Readwise/Podcast.
 ---
 
-# TAO Podcast Transcript
+# TAO Podcast
 
 ## Overview
 Produce clean TXT transcript-like outputs for podcast/video episodes with a fixed decision tree.
@@ -171,7 +171,7 @@ Require `--doctor` to exit `0` before any real transcript run.
 - `--doctor` verifies dependencies and model-directory writability. It does not download weights or validate inference. First ASR use or `--bootstrap-models small` downloads weights.
 - Audio processing uses system temporary directories. Stage the `.txt` in `/tmp`; the `.md` note goes straight to the requested vault folder. No `.meta.json` is written.
 - Sandboxed agent runs may be unable to write `~/.local/share`; in that case set `PODCAST_ASR_MODEL_ROOT=/tmp/podcast-models` for the run, or run `--doctor` / ASR in a normal terminal.
-- In this vault, edit `.agents/src/tao-podcast-transcript/`, not generated `.agents/skills/tao-podcast-transcript/`. Deployment uses `.agents/scripts/sync-podcast-skill.sh` and requires a clean source checkout. Respect any user restriction against changing the generated directory.
+- In this vault, edit `.agents/src/tao-podcast-skill/`, not generated `.agents/skills/tao-podcast-skill/`. Deployment uses `.agents/scripts/sync-podcast-skill.sh` and requires a clean source checkout. Respect any user restriction against changing the generated directory.
 
 Episode-page ASR command (when the requested transcription is permitted):
 
