@@ -56,7 +56,7 @@ python3 scripts/podcast_transcript_txt.py \
 ## 方式 A：当作普通脚本使用（推荐）
 
 ```bash
-cd podcast-transcript-txt-skill
+cd tao-podcast-transcript
 python3 -m pip install -r requirements.txt
 python3 scripts/podcast_transcript_txt.py --doctor
 python3 scripts/podcast_transcript_txt.py \
@@ -68,7 +68,7 @@ python3 scripts/podcast_transcript_txt.py \
 
 ```bash
 mkdir -p ~/.codex/skills
-cp -R podcast-transcript-txt-skill ~/.codex/skills/tao-podcast-transcript
+cp -R tao-podcast-transcript ~/.codex/skills/tao-podcast-transcript
 ```
 
 在对话中触发 `$tao-podcast-transcript`。
