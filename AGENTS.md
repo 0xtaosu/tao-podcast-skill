@@ -15,8 +15,7 @@ The user will usually give you a link or a plain episode title.
 Before the first real transcript run on a machine:
 
 ```bash
-python3 -m pip install -r requirements.txt
-python3 scripts/podcast_transcript_txt.py --doctor
+bash run.sh --doctor
 ```
 
 Only continue to the real transcript command when `--doctor` exits with code `0`.
@@ -30,7 +29,7 @@ If `--doctor` fails:
 ## Real Transcript Command
 
 ```bash
-python3 scripts/podcast_transcript_txt.py \
+bash run.sh \
   --input "<episode-link-or-title>" \
   --out-dir "<output-dir>"
 ```
@@ -38,7 +37,7 @@ python3 scripts/podcast_transcript_txt.py \
 If the input is likely to require audio fallback, you may use:
 
 ```bash
-python3 scripts/podcast_transcript_txt.py \
+bash run.sh \
   --input "<episode-link-or-title>" \
   --asr-model small \
   --out-dir "<output-dir>"
@@ -59,6 +58,18 @@ After success:
 2. Return the generated `.meta.json` path.
 3. Briefly state which resolver path was used if you inspect the meta file.
 4. Remind the user that the transcript is a draft and should get one proofreading pass before publishing.
+
+For `Readwise/Podcast`, generate the note from the vault template after extraction:
+
+```bash
+python3 scripts/obsidian_note.py \
+  --txt "<txt-path>" \
+  --meta "<meta-path>" \
+  --template "Template/Podcast.md" \
+  --out-dir "Readwise/Podcast"
+```
+
+Success is `NOTE <note-path>` plus `META <meta-path>`. The renderer fills metadata, chapters, transcript and extraction status; it leaves `Summary` / `Bullet point` for the agent to write and proofread.
 
 ## Failure Contract
 
@@ -83,3 +94,8 @@ Return:
 - Do not assume YouTube subtitles or official transcripts always exist.
 - Local ASR fallback depends on `faster-whisper`.
 - Do not describe the repo as publish-ready transcript quality; it produces a working draft.
+
+
+## Local storage and output mode
+
+Install dependencies only in the external venv described in SKILL.md, never in a synced vault. Doctor success does not mean model weights are downloaded. For episode-page transcript or ASR requests, add `--page-text-fallback off`; otherwise the default may return only show notes. Inspect metadata before claiming transcript success. Do not create speaker drafts from show notes.

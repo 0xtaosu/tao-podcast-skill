@@ -42,7 +42,7 @@ TRANSCRIPTION_JSON_RE = re.compile(r"https://[^\"'<> ]*transcription\.json[^\"'<
 AUDIO_EXTS = (".m4a", ".mp3", ".wav", ".flac", ".aac", ".ogg", ".opus", ".mp4", ".webm")
 DEFAULT_ASR_MODEL = os.getenv("PODCAST_ASR_MODEL", "small").strip() or "small"
 DEFAULT_MODEL_ROOT = Path(
-    os.getenv("PODCAST_ASR_MODEL_ROOT", str(Path.home() / ".codex/models/faster-whisper"))
+    os.getenv("PODCAST_ASR_MODEL_ROOT", str(Path(os.getenv("PODCAST_SKILL_HOME", str(Path.home() / ".local/share/podcast-transcript-txt"))).expanduser() / "models"))
 ).expanduser()
 SUPPORTED_ASR_MODELS = ("small", "medium")
 
@@ -73,6 +73,9 @@ def probe_faster_whisper() -> Tuple[bool, str]:
 def ensure_model_root_writable(model_root: Path) -> Tuple[bool, str]:
     try:
         model_root.mkdir(parents=True, exist_ok=True)
+        with tempfile.TemporaryFile(dir=model_root) as probe:
+            probe.write(b"doctor")
+            probe.flush()
         return True, f"model cache root ready: {model_root}"
     except Exception as e:
         return False, f"model cache root not writable: {model_root} ({compact_ws(str(e))})"

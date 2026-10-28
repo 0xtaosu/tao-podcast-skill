@@ -11,6 +11,13 @@ Prioritize official transcript sources first, then platform subtitles or officia
 ASR fallback uses `faster-whisper` with selectable `--asr-model small|medium` (default `small`).
 All transcript outputs are working drafts; always recommend one strong-LLM proofreading pass.
 
+## Match the requested output
+
+- Adding an episode or saving listening notes: page descriptions are acceptable, but label them as show notes, not transcripts. Check for an existing note with the same source URL before creating a duplicate.
+- Transcript or ASR requests for episode webpages: use `--page-text-fallback off` so descriptions cannot prematurely satisfy the request. The executor still tries supported official transcript parsing before audio ASR.
+- Read `meta.json.resolver` and `notes`. Exit code 0 means extraction succeeded, not necessarily that a full transcript exists.
+- Failure to extract subtitles does not prove the platform has none.
+
 ## Workflow Decision Tree
 
 1. Normalize input.
@@ -45,8 +52,9 @@ All transcript outputs are working drafts; always recommend one strong-LLM proof
 - Keep paragraph-level readability.
 - Write one TXT file per input item.
 
-6. Post-process (optional — run after step 5 when transcript is ready).
-- Trigger: always run this step. Do not wait for the user to ask.
+6. Post-process actual transcripts after step 5.
+- Do not assign speakers to show notes or page descriptions.
+- Create a speaker draft for actual transcripts; attribution is inferred, not diarization.
 - Input: the transcript from step 5 + `meta.json` (title, description, shownotes, chapters).
 - Optionally generate `<same-base-name>.body-cleaned.txt`: remove only pure ads / pure housekeeping / pure subscribe reminders, keep all substantive conversation verbatim, and prefer this file for `*.speaker-draft.txt` when present.
 - Extract speaker hints from metadata: episode title, guest name mentions, intro/outro text.
@@ -55,7 +63,14 @@ All transcript outputs are working drafts; always recommend one strong-LLM proof
 - For ASR-derived transcripts: names and terms may have phonetic errors — cross-reference metadata to correct obvious mismatches before attributing.
 - Do not invent speaker names not inferable from the transcript or metadata.
 - Output: `<same-base-name>.speaker-draft.txt` alongside the existing `*.txt`. Never overwrite the original transcript.
-- Add a one-line header to the speaker-draft file: `# Speaker Draft — inferred, not authoritative. ASR source.`
+- Add a header identifying inferred attribution and the actual source type; use `ASR source` only for ASR output.
+
+7. Generate the Obsidian note when the target is `Readwise/Podcast`.
+- Run `scripts/obsidian_note.py` with the transcript, its `meta.json`, `Template/Podcast.md`, and the target folder.
+- The renderer fills YAML, About fields, 收听索引, Transcript, and 提取状态, and strips the template's `%%` block.
+- `Summary` and `Bullet point` are intentionally left blank: write them after generation from the transcript, then proofread names and terms.
+- It refuses to overwrite an existing note with the same `url` or the same filename unless `--force`; prefer editing the existing note instead.
+- The meta file is copied next to the note as `<episode-id>.meta.json`.
 
 ## Deterministic Rules
 
@@ -77,7 +92,7 @@ All transcript outputs are working drafts; always recommend one strong-LLM proof
 - Explicitly state that output TXT may be transcript, subtitle-derived text, or visible page text depending on resolver.
 - Explicitly recommend one strong-LLM proofreading pass for names/terms/punctuation.
 - Keep this notice concise but always present in final user-facing delivery.
-- Ask for ASR model (`small` or `medium`) only when the run is likely to hit audio fallback, and explain the tradeoff in one sentence.
+- Default to `small` for ASR; preserve an existing user choice. Explain that `medium` needs more storage and processing time when relevant, without requiring repeated confirmation.
 - Remind users that delivery includes both `*.txt` and `*.meta.json`.
 
 ## Quick Start
@@ -85,7 +100,7 @@ All transcript outputs are working drafts; always recommend one strong-LLM proof
 Run (recommended stable usage):
 
 ```bash
-python3 scripts/podcast_transcript_txt.py \
+bash run.sh \
   --input "https://www.youtube.com/watch?v=n1E9IZfvGMA" \
   --input "播客标题关键词" \
   --out-dir "/tmp/transcripts"
@@ -96,11 +111,23 @@ Outputs:
 - otherwise `<title>.txt`
 - matching `.meta.json`
 
+For an Obsidian podcast note, run the renderer after extraction:
+
+```bash
+python3 scripts/obsidian_note.py \
+  --txt "/tmp/transcripts/<episode>.txt" \
+  --meta "/tmp/transcripts/<episode>.meta.json" \
+  --template "Template/Podcast.md" \
+  --out-dir "Readwise/Podcast"
+```
+
+Outputs `NOTE <note-path>` and `META <meta-path>`. The note is a scaffold, not a finished summary: fill `Summary` / `Bullet point` and proofread the transcript before calling it done.
+
 ## Host-Specific Notes
 
 - `scripod.com`: prefer `/api/transcript/<episode_id>`; for plain titles use `/api/search/?entity=episode` then `/api/channel/?feedUrl=...` to resolve episode id.
 - YouTube: use `yt-dlp` with `youtube:player_client=android`; try language set in this order: `zh-*` then `en-orig` then `en`.
-- Xiaoyuzhou episode pages: prefer structured page text (`shownotes` / visible text), keep `transcriptMediaId` as a metadata clue, and only then fall back to audio ASR.
+- Xiaoyuzhou episode pages: prefer structured page text (`shownotes` / visible text), keep `transcriptMediaId` as a metadata clue, and only then fall back to audio ASR. The note renderer reads `__NEXT_DATA__` for title, podcast, people, publish date, duration, and chapters.
 - Apple transcript files: parse `.ttml` directly instead of re-running ASR.
 
 ## References
@@ -110,6 +137,7 @@ Outputs:
 ## Scripts
 
 - Main executor: `scripts/podcast_transcript_txt.py`
+- Obsidian note renderer: `scripts/obsidian_note.py`
 
 ## Local install notes
 
@@ -131,3 +159,19 @@ python3 -m venv ~/.local/share/podcast-transcript-txt/venv
 ```
 
 Require `--doctor` to exit `0` before any real transcript run.
+
+
+## Storage and maintenance
+
+- Keep venvs, model weights, package caches and downloaded audio outside synced vaults; lightweight scripts and instructions may remain in the project.
+- Default runtime root: `~/.local/share/podcast-transcript-txt/`; dependencies live in `venv/`, weights in `models/`. `PODCAST_SKILL_HOME` overrides the base, and `PODCAST_SKILL_VENV` / `PODCAST_ASR_MODEL_ROOT` override individual paths.
+- Prefer `bash run.sh`; direct Python execution uses the same default model root but requires the correct interpreter.
+- `--doctor` verifies dependencies and model-directory writability. It does not download weights or validate inference. First ASR use or `--bootstrap-models small` downloads weights.
+- Audio processing uses system temporary directories. Stage output in `/tmp`, then save requested text and metadata to the vault.
+- In this vault, edit `.agents/src/podcast-transcript-txt-skill/`, not generated `.agents/skills/podcast-transcript-txt/`. Deployment uses `.agents/scripts/sync-podcast-skill.sh` and requires a clean source checkout. Respect any user restriction against changing the generated directory.
+
+Episode-page ASR command (when the requested transcription is permitted):
+
+```bash
+bash run.sh --input "<episode-url>" --page-text-fallback off --asr-model small --out-dir /tmp/transcripts
+```

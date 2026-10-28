@@ -25,5 +25,6 @@ fi
 
 : "${PODCAST_ASR_MODEL_ROOT:=$BASE/models}"
 export PODCAST_ASR_MODEL_ROOT
+export PYTHONDONTWRITEBYTECODE=1
 
 exec "$PY" "$HERE/scripts/podcast_transcript_txt.py" "$@"

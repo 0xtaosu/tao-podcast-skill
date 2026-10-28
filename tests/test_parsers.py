@@ -76,6 +76,20 @@ class ParserTests(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, "TTML transcript parsed too few lines"):
                 MODULE.process_item(str(bad_ttml), out_dir, ytdlp=None, asr_model="small", page_text_fallback="auto")
 
+    def test_model_root_write_probe_failure_is_reported(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            with mock.patch.object(MODULE.tempfile, "TemporaryFile", side_effect=PermissionError("denied")):
+                ok, detail = MODULE.ensure_model_root_writable(Path(td))
+        self.assertFalse(ok)
+        self.assertIn("denied", detail)
+
+    def test_model_root_probe_leaves_no_files(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td) / "models"
+            ok, detail = MODULE.ensure_model_root_writable(root)
+            self.assertTrue(ok, detail)
+            self.assertEqual(list(root.iterdir()), [])
+
     def test_build_doctor_checks_reports_missing_dependencies(self) -> None:
         checks, exit_code = MODULE.build_doctor_checks(
             python_version=(3, 9),
