@@ -110,3 +110,24 @@ Outputs:
 ## Scripts
 
 - Main executor: `scripts/podcast_transcript_txt.py`
+
+## Local install notes
+
+`run.sh` is a wrapper that keeps Python dependencies and ASR weights out of the skill directory — which matters when the skill lives inside a synced folder (iCloud, Dropbox) or inside another git repository.
+
+```bash
+bash run.sh --doctor
+bash run.sh --input "<url-or-title>" --out-dir "<dir>"
+```
+
+It resolves the interpreter from `$PODCAST_SKILL_VENV` (default `~/.local/share/podcast-transcript-txt/venv`) and falls back to system `python3` with a warning when that venv is absent. It also pins `PODCAST_ASR_MODEL_ROOT` (default `~/.local/share/podcast-transcript-txt/models`).
+
+One-time setup:
+
+```bash
+python3 -m venv ~/.local/share/podcast-transcript-txt/venv
+~/.local/share/podcast-transcript-txt/venv/bin/pip install -U pip
+~/.local/share/podcast-transcript-txt/venv/bin/pip install -r requirements.txt
+```
+
+Require `--doctor` to exit `0` before any real transcript run.
