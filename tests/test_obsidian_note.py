@@ -1,6 +1,8 @@
 import importlib.util
+import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 
 SCRIPT_PATH = Path(__file__).resolve().parents[1] / "scripts" / "obsidian_note.py"
@@ -11,6 +13,63 @@ SPEC.loader.exec_module(MODULE)
 
 
 class NoteParserTests(unittest.TestCase):
+    def test_render_note_fills_template_and_writes_only_md(self) -> None:
+        template = """---
+created: ""
+url: ""
+title: ""
+podcast: ""
+host: ""
+guest: ""
+published:
+duration:
+transcript_status:
+---
+## About
+
+type:: #type/podcast
+podcast::
+host::
+guest::
+published::
+duration::
+
+[收听原节目]()
+
+## Summary
+
+## Transcript
+
+## 提取状态
+"""
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            txt = root / "episode.txt"
+            txt.write_text("[00:00:01] hello\n[00:00:05] world\n", encoding="utf-8")
+            template_path = root / "Podcast.md"
+            template_path.write_text(template, encoding="utf-8")
+            page = {
+                "url": "https://example.com/ep",
+                "title": "Episode",
+                "podcast": "Show",
+                "description": "* 00:00 Intro\n* 01:00 Topic",
+                "published": "2026-09-27",
+                "duration_sec": 120,
+            }
+            with mock.patch.object(MODULE, "collect_page_info", return_value=page):
+                note = MODULE.render_note(
+                    txt,
+                    {"input": "https://example.com/ep", "resolver": "episode-page-asr", "quality": {"line_count": 2}},
+                    template_path,
+                    root / "notes",
+                )
+            text = note.read_text(encoding="utf-8")
+            self.assertIn('podcast: "Show"', text)
+            self.assertIn("podcast:: Show", text)
+            self.assertIn("### 00:00 Intro", text)
+            self.assertTrue(text.endswith("\n"))
+            self.assertEqual(list((root / "notes").glob("*.meta.json")), [])
+
     def test_parse_chapters_skips_nested_earlier_timestamp(self) -> None:
         text = """【时光机】
 * 01:26 项目介绍

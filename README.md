@@ -16,7 +16,7 @@ This tool exists to make sure the text exists. Locally. Without sending your aud
 
 ## Output Quality
 
-Every run produces a `.meta.json` alongside the `.txt` — it tells you exactly how the transcript was sourced. Official transcripts and subtitles are clean enough to read immediately. ASR output is a working draft: run one LLM proofreading pass before publishing. The tool always tells you which is which.
+This fork writes only the `.txt` transcript (and, with `--note-dir`, an Obsidian note rendered from `Template/Podcast.md`). No `.meta.json` sidecar is produced; the resolver and attempt trace are printed to stdout/stderr for debugging. Official transcripts and subtitles are clean enough to read immediately. ASR output is a working draft: run one LLM proofreading pass before publishing. The tool always tells you which is which.
 
 ## Recommended User Prompt (Copy-Paste)
 
@@ -27,9 +27,9 @@ If audio fallback is needed, choose ASR model:
 - small (default): faster, lighter, best for first draft
 - medium: slower, larger, usually better on names/terms
 
-Output will include both:
+Output:
 1) `<podcast-name> - <title>.txt` or `<title>.txt`
-2) matching `.meta.json` (resolver + quality + attempts for debugging)
+2) optional `.md` note when `--note-dir` and `--note-template` are used
 
 Important: this transcript is a draft. Run one strong-LLM proofreading pass before publishing.
 ```
@@ -56,7 +56,7 @@ python3 scripts/podcast_transcript_txt.py \
 Output:
 - `<podcast-name> - <title>.txt` when podcast name is already available
 - otherwise `<title>.txt`
-- matching `.meta.json`
+- optional `.md` note with `--note-dir` / `--note-template`
 
 ## Agent Quick Start
 
@@ -156,13 +156,9 @@ python3 scripts/podcast_transcript_txt.py \
 
 For each successful input:
 - `*.txt`: cleaned transcript text
-- `*.meta.json`: execution metadata and diagnostics
+- optional `.md`: Obsidian note rendered from `Template/Podcast.md`
 
-Important `meta.json` fields:
-- `resolver`: which path produced the final result
-- `source`: final source URL
-- `status`: `ok` or `warn`
-- `quality`: line-level quality metrics
+The run prints `OK <txt>` and, when note flags are used, `NOTE <md>`. Resolver, source, status and quality are kept in memory and printed for diagnostics; they are not written as a sidecar file.
 - `attempts[]`: step-by-step attempts and failures
 
 Exit code:
@@ -183,7 +179,7 @@ Notes:
 - Official transcript URL input and local transcript file input are supported directly.
 - `episode-page-text` is page text, not a time-aligned transcript.
 - Plain title path is specialized: Scripod `search -> channel -> transcript` -> `ytsearch1` -> Apple `podcastEpisode` -> audio ASR.
-- ASR outputs are intentionally marked as draft in `meta.json`.
+- ASR outputs are intentionally marked as draft in the printed status.
 
 ## Resolution Matrix
 
@@ -200,8 +196,8 @@ Notes:
 
 Guaranteed:
 - Deterministic order: A official -> B subtitle -> C ASR.
-- One `.txt` + one `.meta.json` per successful input.
-- Full attempt trace in `meta.json.attempts[]` for debugging.
+- One `.txt` per successful input, plus an optional `.md` note.
+- Full attempt trace is printed for debugging; no sidecar metadata file is written.
 
 Not guaranteed:
 - 100% source availability (paywalls, geo/IP blocks, deleted media).
@@ -221,7 +217,7 @@ Out of scope:
 5. For plain-title inputs, prefer Scripod official transcript matches before YouTube search and Apple audio ASR.
 6. If an episode webpage exposes meaningful visible text, use it before heavy ASR and mark it clearly as page text.
 7. If subtitles/page text are missing or unusable and an audio source is available, run local ASR (`--asr-model small|medium`, default `small`).
-8. If all routes fail, surface exact failed stage and unblock action in CLI error + `meta.json`.
+8. If all routes fail, surface the exact failed stage and unblock action in the CLI error and attempt log.
 
 ## ASR Runtime And Quality Expectation
 

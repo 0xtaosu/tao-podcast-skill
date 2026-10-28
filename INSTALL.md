@@ -90,7 +90,7 @@ python3 scripts/podcast_transcript_txt.py \
 1. 先要求 `--doctor` 返回退出码 `0`。  
 2. 读标准输出中的 `OK` / `FAIL` 行作为执行结果。  
 3. 成功后从 `--out-dir` 读取对应 `*.txt`。  
-4. 同时读取同名 `*.meta.json` 作为可观测日志（`attempts`、`quality`、`resolver`）。  
+4. 解析细节（`attempts`、`quality`、`resolver`）由运行日志输出，不再写 `*.meta.json`。  
 
 ## 推荐给最终用户的提示文案（可直接复制）
 
@@ -99,9 +99,9 @@ If audio fallback is needed, choose ASR model:
 - small (default): faster, lighter, best for first draft
 - medium: slower, larger, usually better on names/terms
 
-Output will include both:
+Output:
 1) transcript.txt
-2) transcript.meta.json (resolver + quality + attempts for debugging)
+2) optional .md note (when --note-dir / --note-template are used)
 
 Important: this transcript is a draft. Run one strong-LLM proofreading pass before publishing.
 ```
@@ -118,7 +118,7 @@ Important: this transcript is a draft. Run one strong-LLM proofreading pass befo
 
 1. 执行 `python3 -m pip install -r requirements.txt`。  
 2. 执行 `python3 scripts/podcast_transcript_txt.py --doctor`，确认返回 `0`。  
-3. 再执行正式转写命令，并读取输出目录里的 `*.txt` 和同名 `*.meta.json`。  
+3. 再执行正式转写命令，并读取输出目录里的 `*.txt`（需要时加 `--note-dir` 生成 `.md` 笔记）。  
 
 ## 输入建议
 

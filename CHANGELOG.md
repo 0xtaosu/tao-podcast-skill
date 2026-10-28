@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased - 2026-10-28
+
+- Rename the skill to `tao-podcast-transcript`.
+- Remove the `.meta.json` sidecar; resolver/quality/attempts stay in memory and are printed for debugging.
+- Add `--note-dir`, `--note-template` and `--note-force`: render an Obsidian podcast note from `Template/Podcast.md` in the same run.
+
 ## v0.3.2 - 2026-03-17
 
 - 仓库可分发性修复：

@@ -14,6 +14,15 @@ SPEC.loader.exec_module(MODULE)
 
 
 class ParserTests(unittest.TestCase):
+    def test_write_outputs_writes_txt_only(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            txt_path, meta = MODULE.write_outputs(
+                Path(td), "Title", "id", ["[00:00:00] hello"], {"podcast_name": "Show"}
+            )
+            self.assertEqual(txt_path.name, "Show - Title.txt")
+            self.assertEqual(meta["podcast_name"], "Show")
+            self.assertEqual(list(Path(td).glob("*.meta.json")), [])
+
     def test_build_output_title_prefixes_podcast_name(self) -> None:
         title = MODULE.build_output_title("Head of Claude Code", {"podcast_name": "Lenny's Podcast"})
         self.assertEqual(title, "Lenny's Podcast - Head of Claude Code")
@@ -144,7 +153,7 @@ class ParserTests(unittest.TestCase):
                 "run_local_asr",
                 return_value=(["[00:00:01] Hello from ASR"], {"model": "small"}),
             ):
-                txt_path, meta_path = MODULE.process_youtube_target(
+                txt_path, meta_data = MODULE.process_youtube_target(
                     "yt-dlp",
                     "https://www.youtube.com/watch?v=abcdefghijk",
                     out_dir,
@@ -156,7 +165,6 @@ class ParserTests(unittest.TestCase):
             self.assertTrue(download_mock.called)
             self.assertEqual(txt_path.read_text(encoding="utf-8").strip(), "[00:00:01] Hello from ASR")
             self.assertEqual(txt_path.name, "Test Show - YouTube Test.txt")
-            meta_data = json.loads(meta_path.read_text(encoding="utf-8"))
             self.assertEqual(meta_data["resolver"], "youtube-id-asr")
             self.assertEqual(meta_data["asr"]["model"], "small")
 
@@ -165,15 +173,13 @@ class ParserTests(unittest.TestCase):
             out_dir = Path(td) / "out"
             out_dir.mkdir()
             meta_txt = out_dir / "episode [id].txt"
-            meta_json = out_dir / "episode [id].meta.json"
             meta_txt.write_text("ok\n", encoding="utf-8")
-            meta_json.write_text("{}\n", encoding="utf-8")
             with mock.patch.object(MODULE, "parse_official_transcript_url") as parse_official_mock, mock.patch.object(
                 MODULE,
                 "process_audio_url_target",
-                return_value=(meta_txt, meta_json),
+                return_value=(meta_txt, {"input": "https://example.com/audio.mp3"}),
             ) as audio_mock:
-                txt_path, meta_path = MODULE.process_item(
+                txt_path, meta_data = MODULE.process_item(
                     "https://example.com/audio.mp3",
                     out_dir,
                     ytdlp="yt-dlp",
@@ -183,7 +189,7 @@ class ParserTests(unittest.TestCase):
             parse_official_mock.assert_not_called()
             self.assertTrue(audio_mock.called)
             self.assertEqual(txt_path, meta_txt)
-            self.assertEqual(meta_path, meta_json)
+            self.assertEqual(meta_data["input"], "https://example.com/audio.mp3")
 
     def test_process_item_plain_title_prefers_scripod_before_youtube(self) -> None:
         with tempfile.TemporaryDirectory() as td:
@@ -204,7 +210,7 @@ class ParserTests(unittest.TestCase):
                 "parse_scripod_transcript",
                 return_value=("sp123", "Best Episode", ["[00:00:01] Official transcript"]),
             ), mock.patch.object(MODULE, "resolve_title_to_youtube") as youtube_mock:
-                txt_path, meta_path = MODULE.process_item(
+                txt_path, meta_data = MODULE.process_item(
                     "Best Episode",
                     out_dir,
                     ytdlp="yt-dlp",
@@ -214,7 +220,7 @@ class ParserTests(unittest.TestCase):
             self.assertTrue(scripod_resolve_mock.called)
             youtube_mock.assert_not_called()
             self.assertTrue(txt_path.exists())
-            self.assertTrue(meta_path.exists())
+            self.assertEqual(meta_data["podcast_name"], "Best Show")
             self.assertEqual(txt_path.name, "Best Show - Best Episode.txt")
 
     def test_youtube_metadata_unwraps_search_entries(self) -> None:
@@ -260,7 +266,7 @@ class ParserTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as td, mock.patch.object(
             MODULE, "http_get", side_effect=fake_http_get
         ) as http_get_mock:
-            txt_path, meta_path = MODULE.process_item(
+            txt_path, meta = MODULE.process_item(
                 "https://scripod.com/episode/abc123xyz",
                 Path(td),
                 ytdlp=None,
@@ -270,7 +276,6 @@ class ParserTests(unittest.TestCase):
 
             self.assertEqual(txt_path.name, "Show Name - Real Episode Title.txt")
             self.assertEqual(txt_path.read_text(encoding="utf-8"), "[00:00:00] Host: Hello world\n")
-            meta = json.loads(meta_path.read_text(encoding="utf-8"))
             self.assertEqual(meta["podcast_name"], "Show Name")
             public_calls = [
                 call for call in http_get_mock.call_args_list
@@ -294,7 +299,7 @@ class ParserTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as td, mock.patch.object(
             MODULE, "http_get", side_effect=fake_http_get
         ):
-            txt_path, meta_path = MODULE.process_item(
+            txt_path, meta = MODULE.process_item(
                 "https://scripod.com/episode/abc123xyz",
                 Path(td),
                 ytdlp=None,
@@ -303,7 +308,7 @@ class ParserTests(unittest.TestCase):
             )
 
             self.assertEqual(txt_path.name, "abc123xyz.txt")
-            self.assertTrue(meta_path.exists())
+            self.assertEqual(meta["resolver"], "scripod-api")
 
 
 if __name__ == "__main__":

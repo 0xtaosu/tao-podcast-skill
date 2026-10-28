@@ -1,21 +1,23 @@
 ---
-name: podcast-transcript-txt
-description: Deterministic workflow to find and export full podcast transcripts as cleaned TXT files from YouTube URLs, episode webpages (including Xiaoyuzhou), Apple Podcasts title search, X/Twitter links, direct audio URLs, or plain episode titles. Use when users ask for 逐字稿/文字版/transcript/txt and want minimal trial-and-error.
+name: tao-podcast-transcript
+description: Deterministic workflow to find and export full podcast transcripts as cleaned TXT files from YouTube URLs, episode webpages (including Xiaoyuzhou), Apple Podcasts title search, X/Twitter links, direct audio URLs, or plain episode titles, and optionally render an Obsidian note from Template/Podcast.md. Use when users ask for 逐字稿/文字版/transcript/txt or ask to add a podcast episode to Readwise/Podcast.
 ---
 
-# Podcast Transcript TXT
+# TAO Podcast Transcript
 
 ## Overview
 Produce clean TXT transcript-like outputs for podcast/video episodes with a fixed decision tree.
 Prioritize official transcript sources first, then platform subtitles or official page text, then local ASR fallback.
 ASR fallback uses `faster-whisper` with selectable `--asr-model small|medium` (default `small`).
+For podcast episodes, the same run can render an Obsidian note from `Template/Podcast.md`.
+No `.meta.json` sidecar is written; extraction details stay in memory and in the note's 提取状态.
 All transcript outputs are working drafts; always recommend one strong-LLM proofreading pass.
 
 ## Match the requested output
 
 - Adding an episode or saving listening notes: page descriptions are acceptable, but label them as show notes, not transcripts. Check for an existing note with the same source URL before creating a duplicate.
 - Transcript or ASR requests for episode webpages: use `--page-text-fallback off` so descriptions cannot prematurely satisfy the request. The executor still tries supported official transcript parsing before audio ASR.
-- Read `meta.json.resolver` and `notes`. Exit code 0 means extraction succeeded, not necessarily that a full transcript exists.
+- Inspect the resolver and attempt log printed by the run. Exit code 0 means extraction succeeded, not necessarily that a full transcript exists.
 - Failure to extract subtitles does not prove the platform has none.
 
 ## Workflow Decision Tree
@@ -42,7 +44,7 @@ All transcript outputs are working drafts; always recommend one strong-LLM proof
 
 4. Error and boundary handling.
 - If A/B/C all fail, return exact failed stage and error detail.
-- Record every step into `meta.json.attempts[]`.
+- Record every step in the in-memory attempt log (printed for debugging, never written as a sidecar file).
 - Do not bypass login/paywall/DRM protections.
 
 5. Clean and export.
@@ -55,7 +57,7 @@ All transcript outputs are working drafts; always recommend one strong-LLM proof
 6. Post-process actual transcripts after step 5.
 - Do not assign speakers to show notes or page descriptions.
 - Create a speaker draft for actual transcripts; attribution is inferred, not diarization.
-- Input: the transcript from step 5 + `meta.json` (title, description, shownotes, chapters).
+- Input: the transcript from step 5 + the run metadata (title, description, shownotes, chapters).
 - Optionally generate `<same-base-name>.body-cleaned.txt`: remove only pure ads / pure housekeeping / pure subscribe reminders, keep all substantive conversation verbatim, and prefer this file for `*.speaker-draft.txt` when present.
 - Extract speaker hints from metadata: episode title, guest name mentions, intro/outro text.
 - Re-read the transcript and annotate each paragraph with the most likely speaker.
@@ -66,11 +68,10 @@ All transcript outputs are working drafts; always recommend one strong-LLM proof
 - Add a header identifying inferred attribution and the actual source type; use `ASR source` only for ASR output.
 
 7. Generate the Obsidian note when the target is `Readwise/Podcast`.
-- Run `scripts/obsidian_note.py` with the transcript, its `meta.json`, `Template/Podcast.md`, and the target folder.
+- Add `--note-dir "<vault>/Readwise/Podcast"` and `--note-template "<vault>/Template/Podcast.md"` to the main command; the note is rendered in the same run, with no intermediate `meta.json`.
 - The renderer fills YAML, About fields, 收听索引, Transcript, and 提取状态, and strips the template's `%%` block.
 - `Summary` and `Bullet point` are intentionally left blank: write them after generation from the transcript, then proofread names and terms.
-- It refuses to overwrite an existing note with the same `url` or the same filename unless `--force`; prefer editing the existing note instead.
-- Keep `meta.json` in the working directory for debugging; do not commit it to the vault.
+- It refuses to overwrite an existing note with the same `url` or the same filename unless `--note-force`; prefer editing the existing note instead.
 
 ## Deterministic Rules
 
@@ -85,7 +86,7 @@ All transcript outputs are working drafts; always recommend one strong-LLM proof
 
 3. Failure reporting contract.
 - Return: failed stage, exact error type, and next action already attempted.
-- Persist each attempt in `meta.json` (`attempts[]`).
+- Keep each attempt in the in-memory log so failures can be reported precisely.
 - If blocked after A/B/C, return one minimal user command to unblock.
 
 4. Delivery quality contract.
@@ -93,7 +94,7 @@ All transcript outputs are working drafts; always recommend one strong-LLM proof
 - Explicitly recommend one strong-LLM proofreading pass for names/terms/punctuation.
 - Keep this notice concise but always present in final user-facing delivery.
 - Default to `small` for ASR; preserve an existing user choice. Explain that `medium` needs more storage and processing time when relevant, without requiring repeated confirmation.
-- Remind users that delivery includes both `*.txt` and `*.meta.json`.
+- Remind users that delivery is the `*.txt` (and the `.md` note when `--note-dir` is used); no `*.meta.json` is produced.
 
 ## Quick Start
 
@@ -109,19 +110,20 @@ bash run.sh \
 Outputs:
 - `<podcast-name> - <title>.txt` when podcast name is already available
 - otherwise `<title>.txt`
-- matching `.meta.json`
 
-For an Obsidian podcast note, run the renderer after extraction:
+For a podcast note in the vault, add the note flags to the same command:
 
 ```bash
-python3 scripts/obsidian_note.py \
-  --txt "/tmp/transcripts/<episode>.txt" \
-  --meta "/tmp/transcripts/<episode>.meta.json" \
-  --template "Template/Podcast.md" \
-  --out-dir "Readwise/Podcast"
+bash run.sh \
+  --input "<episode-url>" \
+  --page-text-fallback off \
+  --asr-model small \
+  --out-dir "/tmp/transcripts" \
+  --note-dir "Readwise/Podcast" \
+  --note-template "Template/Podcast.md"
 ```
 
-Outputs `NOTE <note-path>`. The note is a scaffold, not a finished summary: fill `Summary` / `Bullet point` and proofread the transcript before calling it done.
+Outputs `OK <txt-path>` and `NOTE <note-path>`. The note is a scaffold, not a finished summary: fill `Summary` / `Bullet point` and proofread the transcript before calling it done.
 
 ## Host-Specific Notes
 
@@ -137,7 +139,7 @@ Outputs `NOTE <note-path>`. The note is a scaffold, not a finished summary: fill
 ## Scripts
 
 - Main executor: `scripts/podcast_transcript_txt.py`
-- Obsidian note renderer: `scripts/obsidian_note.py`
+- Obsidian note renderer (called by the executor): `scripts/obsidian_note.py`
 
 ## Local install notes
 
@@ -167,8 +169,8 @@ Require `--doctor` to exit `0` before any real transcript run.
 - Default runtime root: `~/.local/share/podcast-transcript-txt/`; dependencies live in `venv/`, weights in `models/`. `PODCAST_SKILL_HOME` overrides the base, and `PODCAST_SKILL_VENV` / `PODCAST_ASR_MODEL_ROOT` override individual paths.
 - Prefer `bash run.sh`; direct Python execution uses the same default model root but requires the correct interpreter.
 - `--doctor` verifies dependencies and model-directory writability. It does not download weights or validate inference. First ASR use or `--bootstrap-models small` downloads weights.
-- Audio processing uses system temporary directories. Stage output in `/tmp`, then save requested text and metadata to the vault.
-- In this vault, edit `.agents/src/podcast-transcript-txt-skill/`, not generated `.agents/skills/podcast-transcript-txt/`. Deployment uses `.agents/scripts/sync-podcast-skill.sh` and requires a clean source checkout. Respect any user restriction against changing the generated directory.
+- Audio processing uses system temporary directories. Stage the `.txt` in `/tmp`; the `.md` note goes straight to the requested vault folder. No `.meta.json` is written.
+- In this vault, edit `.agents/src/podcast-transcript-txt-skill/`, not generated `.agents/skills/tao-podcast-transcript/`. Deployment uses `.agents/scripts/sync-podcast-skill.sh` and requires a clean source checkout. Respect any user restriction against changing the generated directory.
 
 Episode-page ASR command (when the requested transcription is permitted):
 

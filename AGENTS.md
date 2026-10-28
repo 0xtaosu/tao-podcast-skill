@@ -6,7 +6,9 @@ Use this repository to export a podcast transcript as:
 
 - `<podcast-name> - <title>.txt` when podcast name is already available
 - otherwise `<title>.txt`
-- matching `.meta.json`
+- optionally an Obsidian note rendered from `Template/Podcast.md`
+
+No `.meta.json` sidecar is produced.
 
 The user will usually give you a link or a plain episode title.
 
@@ -50,26 +52,27 @@ Use `small` by default unless the user explicitly wants the slower `medium` mode
 Treat the run as successful only when stdout contains:
 
 - `OK    <txt-path>`
-- `META  <meta-path>`
+- `NOTE  <note-path>` when `--note-dir` / `--note-template` are used
 
 After success:
 
-1. Return the generated `.txt` path.
-2. Return the generated `.meta.json` path.
-3. Briefly state which resolver path was used if you inspect the meta file.
-4. Remind the user that the transcript is a draft and should get one proofreading pass before publishing.
+1. Return the generated `.txt` path (and the `.md` note when requested).
+2. Briefly state which resolver path was used.
+3. Remind the user that the transcript is a draft and should get one proofreading pass before publishing.
 
-For `Readwise/Podcast`, generate the note from the vault template after extraction:
+For `Readwise/Podcast`, add the note flags to the same run:
 
 ```bash
-python3 scripts/obsidian_note.py \
-  --txt "<txt-path>" \
-  --meta "<meta-path>" \
-  --template "Template/Podcast.md" \
-  --out-dir "Readwise/Podcast"
+bash run.sh \
+  --input "<episode-url>" \
+  --page-text-fallback off \
+  --asr-model small \
+  --out-dir "/tmp/transcripts" \
+  --note-dir "Readwise/Podcast" \
+  --note-template "Template/Podcast.md"
 ```
 
-Success is `NOTE <note-path>`. The renderer fills metadata, chapters, transcript and extraction status; it leaves `Summary` / `Bullet point` for the agent to write and proofread. Keep `meta.json` in the working directory, not in the vault.
+The renderer fills metadata, chapters, transcript and extraction status; it leaves `Summary` / `Bullet point` for the agent to write and proofread. No `meta.json` is written.
 
 ## Failure Contract
 

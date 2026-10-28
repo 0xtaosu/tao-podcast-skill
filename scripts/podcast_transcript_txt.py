@@ -10,7 +10,7 @@ Input types:
 Output:
 - <podcast-name> - <title>.txt (when podcast name is already available)
 - <title>.txt
-- matching .meta.json alongside the transcript
+- optional Obsidian note rendered from Template/Podcast.md (--note-dir)
 """
 
 from __future__ import annotations
@@ -1432,13 +1432,11 @@ def build_output_title(title: str, meta: Dict[str, Any]) -> str:
     return f"{podcast_name} - {clean_title}"
 
 
-def write_outputs(out_dir: Path, title: str, stable_id: str, lines: List[str], meta: dict) -> Tuple[Path, Path]:
+def write_outputs(out_dir: Path, title: str, stable_id: str, lines: List[str], meta: dict) -> Tuple[Path, dict]:
     base = sanitize_filename(build_output_title(title, meta))
     txt_path = out_dir / f"{base}.txt"
-    meta_path = out_dir / f"{base}.meta.json"
     txt_path.write_text("\n".join(lines).strip() + "\n", encoding="utf-8")
-    meta_path.write_text(json.dumps(meta, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    return txt_path, meta_path
+    return txt_path, meta
 
 
 def process_youtube_target(
@@ -1448,7 +1446,7 @@ def process_youtube_target(
     meta: Dict[str, Any],
     resolver_name: str,
     asr_model: str,
-) -> Tuple[Path, Path]:
+) -> Tuple[Path, dict]:
     info = youtube_metadata(ytdlp, target)
     real_id = info["id"]
     title = info["title"]
@@ -1535,7 +1533,7 @@ def process_audio_url_target(
     meta: Dict[str, Any],
     resolver_name: str,
     asr_model: str,
-) -> Tuple[Path, Path]:
+) -> Tuple[Path, dict]:
     with tempfile.TemporaryDirectory(prefix="podcast_asr_") as td:
         suffix = Path(urllib.parse.urlparse(audio_url).path).suffix or ".audio"
         audio_path = Path(td) / f"input{suffix}"
@@ -1561,7 +1559,7 @@ def process_item(
     ytdlp: Optional[str],
     asr_model: str,
     page_text_fallback: str,
-) -> Tuple[Path, Path]:
+) -> Tuple[Path, dict]:
     meta: Dict[str, Any] = {
         "input": raw,
         "resolver": None,
@@ -1830,6 +1828,9 @@ def main() -> int:
         help="For episode webpages, prefer visible page text/show notes before ASR (default: auto)",
     )
     parser.add_argument("--bootstrap-models", nargs="+", help="Pre-download ASR models to persistent local root")
+    parser.add_argument("--note-dir", help="Also render an Obsidian note into this folder (e.g. Readwise/Podcast)")
+    parser.add_argument("--note-template", help="Markdown template for the note (e.g. Template/Podcast.md)")
+    parser.add_argument("--note-force", action="store_true", help="Overwrite an existing note with the same URL or filename")
     args = parser.parse_args()
 
     if args.doctor:
@@ -1840,6 +1841,8 @@ def main() -> int:
     out_dir = Path(args.out_dir).expanduser().resolve()
     out_dir.mkdir(parents=True, exist_ok=True)
 
+    if bool(args.note_dir) != bool(args.note_template):
+        parser.error("--note-dir and --note-template must be provided together")
     if not args.input and not args.bootstrap_models:
         parser.error("at least one --input is required (or use --doctor / --bootstrap-models)")
 
@@ -1854,11 +1857,27 @@ def main() -> int:
     for raw in args.input or []:
         try:
             txt, meta = process_item(raw, out_dir, ytdlp, args.asr_model, args.page_text_fallback)
-            print(f"OK\t{txt}")
-            print(f"META\t{meta}")
         except Exception as e:
             failures += 1
             print(f"FAIL\t{raw}\t{e}", file=sys.stderr)
+            continue
+
+        print(f"OK\t{txt}")
+        if args.note_dir:
+            try:
+                from obsidian_note import render_note
+
+                note = render_note(
+                    txt,
+                    meta,
+                    Path(args.note_template),
+                    Path(args.note_dir),
+                    args.note_force,
+                )
+                print(f"NOTE\t{note}")
+            except Exception as e:
+                failures += 1
+                print(f"NOTE_FAIL\t{raw}\t{e}", file=sys.stderr)
 
     return 1 if failures else 0
 

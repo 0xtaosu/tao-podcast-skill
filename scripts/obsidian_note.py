@@ -1,22 +1,17 @@
 #!/usr/bin/env python3
-"""Render a podcast transcript + meta pair into an Obsidian note.
+"""Render a podcast transcript into an Obsidian note.
 
 The note skeleton comes from a Markdown template (normally
 ``Template/Podcast.md``). Only deterministic fields are filled: frontmatter,
 About fields, chapter index, transcript, and extraction status. Summary and
 bullet points are left for the agent/reader.
 
-Usage:
-    python3 scripts/obsidian_note.py \
-        --txt "/tmp/episode.txt" \
-        --meta "/tmp/episode.meta.json" \
-        --template "/vault/Template/Podcast.md" \
-        --out-dir "/vault/Readwise/Podcast"
+Called by ``podcast_transcript_txt.py`` when ``--note-dir`` and
+``--note-template`` are provided. No ``.meta.json`` sidecar is involved.
 """
 
 from __future__ import annotations
 
-import argparse
 import json
 import re
 import sys
@@ -211,10 +206,10 @@ def _existing_note(out_dir: Path, url: str) -> Optional[Path]:
     return None
 
 
-def render_note_from_files(
-    txt_path: Path, meta_path: Path, template_path: Path, out_dir: Path, force: bool = False
+def render_note(
+    txt_path: Path, meta: Dict[str, Any], template_path: Path, out_dir: Path, force: bool = False
 ) -> Path:
-    meta = json.loads(Path(meta_path).read_text(encoding="utf-8"))
+    """Render one note from an in-memory metadata dict (no meta file needed)."""
     template = Path(template_path).read_text(encoding="utf-8")
     rows = parse_transcript(Path(txt_path).read_text(encoding="utf-8"))
     if not rows:
@@ -315,36 +310,12 @@ def render_note_from_files(
         raise RuntimeError(f"note already exists for this URL: {existing} (use --force to overwrite)")
 
     date_prefix = published or date.today().isoformat()
-    stem = f"{date_prefix} PODCAST"
     if podcast:
-        stem += f" {podcast}"
-    stem += f" - {title}"
+        stem = f"{date_prefix} PODCAST {podcast} - {title}"
+    else:
+        stem = f"{date_prefix} PODCAST {title}"
     note_path = out_dir / f"{sanitize_filename(stem)}.md"
     if note_path.exists() and not force:
         raise RuntimeError(f"note path already exists: {note_path} (use --force to overwrite)")
     note_path.write_text(text, encoding="utf-8")
     return note_path
-
-
-def main() -> int:
-    parser = argparse.ArgumentParser(description="Render an Obsidian podcast note from a transcript and meta.json")
-    parser.add_argument("--txt", required=True, help="Transcript .txt path")
-    parser.add_argument("--meta", required=True, help="Transcript .meta.json path")
-    parser.add_argument("--template", required=True, help="Obsidian template path, e.g. Template/Podcast.md")
-    parser.add_argument("--out-dir", required=True, help="Note output directory, e.g. Readwise/Podcast")
-    parser.add_argument("--force", action="store_true", help="Overwrite an existing note with the same URL")
-    args = parser.parse_args()
-
-    try:
-        note = render_note_from_files(
-            Path(args.txt), Path(args.meta), Path(args.template), Path(args.out_dir), args.force
-        )
-    except Exception as exc:
-        print(f"FAIL\t{exc}", file=sys.stderr)
-        return 1
-    print(f"NOTE\t{note}")
-    return 0
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())
