@@ -15,6 +15,9 @@ VENV="${PODCAST_SKILL_VENV:-$BASE/venv}"
 
 if [ -x "$VENV/bin/python" ]; then
   PY="$VENV/bin/python"
+  # doctor 用 shutil.which("yt-dlp") 找可执行文件，所以 venv/bin 必须进 PATH，
+  # 否则依赖装好了仍会被判 FAIL。
+  export PATH="$VENV/bin:$PATH"
 else
   PY="${PYTHON:-python3}"
   echo "WARN: 未找到 ${VENV}/bin/python，回退到 ${PY}；ASR/yt-dlp 依赖可能缺失。" >&2
