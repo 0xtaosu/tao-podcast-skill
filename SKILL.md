@@ -170,6 +170,7 @@ Require `--doctor` to exit `0` before any real transcript run.
 - Prefer `bash run.sh`; direct Python execution uses the same default model root but requires the correct interpreter.
 - `--doctor` verifies dependencies and model-directory writability. It does not download weights or validate inference. First ASR use or `--bootstrap-models small` downloads weights.
 - Audio processing uses system temporary directories. Stage the `.txt` in `/tmp`; the `.md` note goes straight to the requested vault folder. No `.meta.json` is written.
+- Sandboxed agent runs may be unable to write `~/.local/share`; in that case set `PODCAST_ASR_MODEL_ROOT=/tmp/podcast-models` for the run, or run `--doctor` / ASR in a normal terminal.
 - In this vault, edit `.agents/src/podcast-transcript-txt-skill/`, not generated `.agents/skills/tao-podcast-transcript/`. Deployment uses `.agents/scripts/sync-podcast-skill.sh` and requires a clean source checkout. Respect any user restriction against changing the generated directory.
 
 Episode-page ASR command (when the requested transcription is permitted):
